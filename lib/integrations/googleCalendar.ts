@@ -11,17 +11,36 @@ import { readToken, writeToken } from "./googleTokenStore";
 
 const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
 
+// Resolves the user-facing origin so the redirect URI we send to Google matches
+// what the user has registered in Google Cloud Console. Order:
+//   1. NEXT_PUBLIC_SITE_URL — explicit canonical override (set this on Vercel)
+//   2. x-forwarded-host + x-forwarded-proto — proxy headers (Vercel populates these)
+//   3. URL of the incoming request — fallback for plain `next dev`
+export function resolveAppOrigin(req: Request): string {
+  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (configured) return configured.replace(/\/+$/, "");
+  const fwdHost = req.headers.get("x-forwarded-host");
+  const fwdProto = req.headers.get("x-forwarded-proto") || "https";
+  if (fwdHost) return `${fwdProto}://${fwdHost}`;
+  const u = new URL(req.url);
+  return `${u.protocol}//${u.host}`;
+}
+
+export function resolveRedirectUri(req: Request): string {
+  return `${resolveAppOrigin(req)}/api/google/callback`;
+}
+
 export function buildOAuthClient(redirectUri?: string): OAuth2Client {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  // Priority: explicit argument (derived from the request origin at runtime)
-  // > env override > localhost dev fallback.
   const resolvedRedirect =
     redirectUri ||
     process.env.GOOGLE_REDIRECT_URI ||
     "http://localhost:3000/api/google/callback";
   if (!clientId || !clientSecret) {
-    throw new Error("Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local.");
+    throw new Error(
+      "Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
+    );
   }
   return new google.auth.OAuth2(clientId, clientSecret, resolvedRedirect);
 }
@@ -56,7 +75,7 @@ export async function getAuthedClient(): Promise<OAuth2Client | null> {
   // the original consent + token exchange.
   const c = buildOAuthClient();
   c.setCredentials(t);
-  // Persist auto-refreshes back to disk.
+  // Persist auto-refreshes back to the Supabase row.
   c.on("tokens", (newTokens) => {
     void writeToken({ ...t, ...newTokens, refresh_token: newTokens.refresh_token || t.refresh_token });
   });
@@ -64,8 +83,12 @@ export async function getAuthedClient(): Promise<OAuth2Client | null> {
 }
 
 export async function isConnected(): Promise<boolean> {
-  const t = await readToken();
-  return !!t?.refresh_token;
+  try {
+    const t = await readToken();
+    return !!t?.refresh_token;
+  } catch {
+    return false;
+  }
 }
 
 export interface GoogleEventLite {

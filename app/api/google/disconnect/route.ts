@@ -5,6 +5,10 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  await clearToken();
-  return NextResponse.json({ ok: true });
+  try {
+    await clearToken();
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: String(err?.message ?? err) }, { status: 400 });
+  }
 }

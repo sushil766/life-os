@@ -142,8 +142,11 @@ export function GoogleConnectCard() {
         </div>
       )}
       {error && (
-        <div className="mb-3 flex items-center gap-2 rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-200">
-          <AlertTriangle size={14} /> {error}
+        <div className="mb-3 rounded-lg border border-rose-500/25 bg-rose-500/10 px-3 py-2 text-[12px] text-rose-200">
+          <div className="flex items-start gap-2">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
+            <div className="min-w-0 flex-1 break-all font-mono text-[11px] leading-relaxed">{error}</div>
+          </div>
         </div>
       )}
 
