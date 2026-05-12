@@ -11,18 +11,23 @@ import { readToken, writeToken } from "./googleTokenStore";
 
 const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
 
-export function buildOAuthClient(): OAuth2Client {
+export function buildOAuthClient(redirectUri?: string): OAuth2Client {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || "http://localhost:3000/api/google/callback";
+  // Priority: explicit argument (derived from the request origin at runtime)
+  // > env override > localhost dev fallback.
+  const resolvedRedirect =
+    redirectUri ||
+    process.env.GOOGLE_REDIRECT_URI ||
+    "http://localhost:3000/api/google/callback";
   if (!clientId || !clientSecret) {
     throw new Error("Google OAuth not configured. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env.local.");
   }
-  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+  return new google.auth.OAuth2(clientId, clientSecret, resolvedRedirect);
 }
 
-export function buildAuthUrl(): string {
-  const c = buildOAuthClient();
+export function buildAuthUrl(redirectUri?: string): string {
+  const c = buildOAuthClient(redirectUri);
   return c.generateAuthUrl({
     access_type: "offline",
     prompt: "consent", // ensures we receive a refresh_token even on re-auth
@@ -30,8 +35,10 @@ export function buildAuthUrl(): string {
   });
 }
 
-export async function exchangeCodeForTokens(code: string): Promise<void> {
-  const c = buildOAuthClient();
+export async function exchangeCodeForTokens(code: string, redirectUri?: string): Promise<void> {
+  // CRITICAL: redirectUri here must match the one used in buildAuthUrl —
+  // Google validates the redirect URI on the token-exchange request too.
+  const c = buildOAuthClient(redirectUri);
   const { tokens } = await c.getToken(code);
   // Preserve existing refresh_token if Google omits it on subsequent grants.
   const prev = await readToken();
@@ -45,6 +52,8 @@ export async function exchangeCodeForTokens(code: string): Promise<void> {
 export async function getAuthedClient(): Promise<OAuth2Client | null> {
   const t = await readToken();
   if (!t?.refresh_token) return null;
+  // Refresh flow doesn't need a redirect URI — Google only validates it on
+  // the original consent + token exchange.
   const c = buildOAuthClient();
   c.setCredentials(t);
   // Persist auto-refreshes back to disk.
