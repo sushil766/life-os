@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm *)",
+      "Bash(curl -s -o /dev/null -w \"GET / -> %{http_code}\\\\n\" http://localhost:3000)",
+      "Bash(curl -s -o /dev/null -w \"GET /fitness -> %{http_code}\\\\n\" http://localhost:3000/fitness)",
+      "Bash(curl -s -o /dev/null -w \"GET /calendar -> %{http_code}\\\\n\" http://localhost:3000/calendar)",
+      "Bash(curl -s -o /dev/null -w \"GET /school -> %{http_code}\\\\n\" http://localhost:3000/school)",
+      "Bash(dir C:Userssushimy-ai-project *)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -First 60)",
+      "Bash(mkdir -p \"/c/Users/sushi/.claude/projects/C--Users-sushi-my-ai-project/memory\")",
+      "Read(//c/Users/sushi/.claude/projects/C--Users-sushi-my-ai-project/memory/**)",
+      "Bash(npm run *)",
+      "Bash(Get-ChildItem C:\\\\Users\\\\sushi\\\\my-ai-project\\\\public *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "ruflo"
+  ]
+}

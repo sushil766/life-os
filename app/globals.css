@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --bg-base: #08080d;
+  --bg-surface: #0f0f17;
+  --bg-elevated: #15151f;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text: #ededf2;
+  --text-dim: #9ca3af;
+  --text-muted: #6b7280;
+}
+
+html, body {
+  background: radial-gradient(1200px 800px at 80% -20%, rgba(167, 139, 250, 0.08), transparent 50%),
+              radial-gradient(900px 600px at -10% 110%, rgba(56, 189, 248, 0.06), transparent 50%),
+              var(--bg-base);
+  color: var(--text);
+  min-height: 100dvh;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@supports (-webkit-touch-callout: none) {
+  /* iOS-specific: prevent rubber-band scrolling on body, allow on content */
+  body {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+button, a, [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+* { border-color: var(--border); }
+
+/* Subtle scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.06); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.12); }
+
+.glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
+  border: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+
+.card-glow:hover {
+  box-shadow: 0 0 0 1px rgba(167,139,250,0.25), 0 12px 40px -16px rgba(167,139,250,0.35);
+  transition: box-shadow 200ms ease;
+}
+
+.shimmer {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2.5s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+input, textarea, select, button { font: inherit; }
+input:focus, textarea:focus, select:focus { outline: none; }
