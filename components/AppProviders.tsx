@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { Toaster } from "sonner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { MigrationDialog } from "@/components/MigrationDialog";
 import { useCloudSync } from "@/lib/sync/useCloudSync";
 
 function CloudSyncBridge({ children }: { children: ReactNode }) {
@@ -15,6 +16,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <ErrorBoundary>
       <AuthProvider>
         <CloudSyncBridge>{children}</CloudSyncBridge>
+        <MigrationDialog />
         <Toaster
           theme="dark"
           position="top-center"

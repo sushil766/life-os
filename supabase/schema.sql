@@ -1,15 +1,18 @@
 -- ============================================================================
--- Life OS — Supabase schema (v1)
+-- Life OS — Supabase schema (v2 — text IDs for migration compatibility)
 -- ----------------------------------------------------------------------------
 -- Run this in Supabase SQL editor or via `supabase db push`.
 -- Every table is scoped to the authenticated user via row-level security.
--- Auth is handled by Supabase Auth — user IDs reference auth.users(id).
+-- Auth is handled by Supabase Auth — user IDs reference auth.users(id) (uuid).
+-- Entity primary keys are TEXT so client-generated IDs from the local Zustand
+-- stores (lib/utils.ts → uid()) can be upserted directly during migration.
+-- Defaults still use uuid_generate_v4() for cloud-only inserts.
 -- ============================================================================
 
 create extension if not exists "uuid-ossp";
 
 -- ---------------------------------------------------------------------------
--- profiles  (1:1 with auth.users)
+-- profiles  (1:1 with auth.users — id stays uuid)
 -- ---------------------------------------------------------------------------
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -47,7 +50,7 @@ create trigger on_auth_user_created
 -- habits + habit_logs
 -- ---------------------------------------------------------------------------
 create table if not exists public.habits (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
   emoji text,
@@ -61,7 +64,7 @@ create index if not exists habits_user_idx on public.habits(user_id);
 
 create table if not exists public.habit_logs (
   user_id uuid not null references auth.users(id) on delete cascade,
-  habit_id uuid not null references public.habits(id) on delete cascade,
+  habit_id text not null references public.habits(id) on delete cascade,
   date date not null,
   completed boolean not null default true,
   created_at timestamptz not null default now(),
@@ -73,7 +76,7 @@ create index if not exists habit_logs_user_date_idx on public.habit_logs(user_id
 -- tasks
 -- ---------------------------------------------------------------------------
 create table if not exists public.tasks (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null,
   date date not null,
@@ -91,7 +94,7 @@ create index if not exists tasks_user_date_idx on public.tasks(user_id, date);
 -- calendar_events  (local + google-sourced)
 -- ---------------------------------------------------------------------------
 create table if not exists public.calendar_events (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null,
   date date not null,
@@ -99,7 +102,7 @@ create table if not exists public.calendar_events (
   end_time text,
   kind text not null default 'personal',
   color text,
-  class_id uuid,
+  class_id text,
   notes text,
   recurring text,
   day_of_week integer,
@@ -115,7 +118,7 @@ create unique index if not exists calendar_google_unique on public.calendar_even
 -- school: classes, assignments, study_sessions
 -- ---------------------------------------------------------------------------
 create table if not exists public.school_classes (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
   code text not null,
   name text not null,
@@ -127,9 +130,9 @@ create table if not exists public.school_classes (
 create index if not exists school_classes_user_idx on public.school_classes(user_id);
 
 create table if not exists public.assignments (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
-  class_id uuid references public.school_classes(id) on delete set null,
+  class_id text references public.school_classes(id) on delete set null,
   title text not null,
   due date not null,
   done boolean not null default false,
@@ -141,9 +144,9 @@ create table if not exists public.assignments (
 create index if not exists assignments_user_due_idx on public.assignments(user_id, due);
 
 create table if not exists public.study_sessions (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
-  class_id uuid references public.school_classes(id) on delete set null,
+  class_id text references public.school_classes(id) on delete set null,
   date date not null,
   minutes integer not null,
   topic text,
@@ -155,7 +158,7 @@ create index if not exists study_sessions_user_date_idx on public.study_sessions
 -- workouts
 -- ---------------------------------------------------------------------------
 create table if not exists public.workouts (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
   date date not null,
   type text not null,
@@ -170,7 +173,7 @@ create index if not exists workouts_user_date_idx on public.workouts(user_id, da
 -- spending: expenses + budgets
 -- ---------------------------------------------------------------------------
 create table if not exists public.expenses (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
   date date not null,
   amount numeric not null,
@@ -191,7 +194,7 @@ create table if not exists public.budgets (
 -- goals + reflections
 -- ---------------------------------------------------------------------------
 create table if not exists public.goals (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
   title text not null,
   target numeric not null default 0,
@@ -217,7 +220,7 @@ create table if not exists public.reflections (
 -- AI: messages + summaries
 -- ---------------------------------------------------------------------------
 create table if not exists public.ai_messages (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
   role text not null check (role in ('user', 'assistant', 'system')),
   text text not null,
@@ -227,7 +230,7 @@ create table if not exists public.ai_messages (
 create index if not exists ai_messages_user_at_idx on public.ai_messages(user_id, at desc);
 
 create table if not exists public.ai_summaries (
-  id uuid primary key default uuid_generate_v4(),
+  id text primary key default uuid_generate_v4()::text,
   user_id uuid not null references auth.users(id) on delete cascade,
   period text not null check (period in ('daily', 'weekly', 'monthly')),
   period_key text not null,

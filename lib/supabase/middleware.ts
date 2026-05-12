@@ -1,19 +1,27 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import type { Database } from "./types";
+import { checkSupabaseEnv } from "./env";
 
 const PROTECTED_PREFIXES = ["/assistant", "/review"];
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!url || !anon) {
-    // Supabase not configured — run app in local-only mode, no auth gating.
+  const envCheck = checkSupabaseEnv();
+  if (!envCheck.ok) {
+    // Supabase not configured / malformed — local-only mode, no auth gating.
+    // Log once per process so misconfig is surfaced in server logs.
+    if (
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ) {
+      // eslint-disable-next-line no-console
+      console.warn("[supabase/middleware]", envCheck.reason);
+    }
     return response;
   }
+  const { url, anon } = envCheck.env!;
 
   const supabase = createServerClient<Database>(url, anon, {
     cookies: {
