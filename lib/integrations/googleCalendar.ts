@@ -17,8 +17,15 @@ const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
 //   2. x-forwarded-host + x-forwarded-proto — proxy headers (Vercel populates these)
 //   3. URL of the incoming request — fallback for plain `next dev`
 export function resolveAppOrigin(req: Request): string {
+  // Tolerant parser: even if someone set NEXT_PUBLIC_SITE_URL to a full
+  // path (e.g. ".../api/google/callback"), we extract just the origin.
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configured) return configured.replace(/\/+$/, "");
+  if (configured) {
+    try {
+      const u = new URL(configured);
+      return `${u.protocol}//${u.host}`;
+    } catch { /* fall through to proxy headers */ }
+  }
   const fwdHost = req.headers.get("x-forwarded-host");
   const fwdProto = req.headers.get("x-forwarded-proto") || "https";
   if (fwdHost) return `${fwdProto}://${fwdHost}`;
